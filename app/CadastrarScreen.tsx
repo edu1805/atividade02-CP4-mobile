@@ -1,27 +1,34 @@
-import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
-export default function LoginScreen() {
+export default function CadastroScreen() {
   // Estados para armazenar os valores digitados
-
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
   // Função para simular o envio do formulário
-  const handleLogin= () => {
-    if ( !email || !senha) {
+  const handleCadastro = () => {
+    if (!nome || !email || !senha) {
       Alert.alert('Atenção', 'Preencha todos os campos!');
       return;
     }
-    Alert.alert('Sucesso ao logar', `Usuário logado com sucesso!`);
+    Alert.alert('Sucesso', `Usuário ${nome} cadastrado com sucesso!`);
     // Aqui você poderia fazer um fetch/axios para enviar ao backend
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Realizar login</Text>
+      <Text style={styles.titulo}>Criar Conta</Text>
 
+      {/* Campo Nome */}
+      <TextInput
+        style={styles.input}
+        placeholder="Nome completo"
+        placeholderTextColor="#aaa"
+        value={nome}
+        onChangeText={setNome}
+      />
 
       {/* Campo Email */}
       <TextInput
@@ -45,11 +52,9 @@ export default function LoginScreen() {
       />
 
       {/* Botão */}
-      <TouchableOpacity style={styles.botao} onPress={handleLogin}>
-        <Text style={styles.textoBotao}>Login</Text>
+      <TouchableOpacity style={styles.botao} onPress={handleCadastro}>
+        <Text style={styles.textoBotao}>Cadastrar</Text>
       </TouchableOpacity>
-
-      <Link href="CadastrarScreen" style={{marginTop:20,color:'white',marginLeft:150}}>Cadastre-se</Link>
     </View>
   );
 }
