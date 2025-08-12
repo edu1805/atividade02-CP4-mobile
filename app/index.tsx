@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import{auth} from '../services/firebaseConfig'
 
 export default function LoginScreen() {
   // Estados para armazenar os valores digitados
@@ -17,7 +19,7 @@ export default function LoginScreen() {
       try {
         const usuarioSalvo = await AsyncStorage.getItem('@user')
         if (usuarioSalvo) {
-          //router.push('/HomeScreen')//Se tiver algo armazenado local, redireciona para HomeScreen
+          router.push('/HomeScreen')//Se tiver algo armazenado local, redireciona para HomeScreen
         }
       } catch (error) {
         console.log("Erro ao verificar login", error)
@@ -34,9 +36,33 @@ const handleLogin = () => {
     Alert.alert('Atenção', 'Preencha todos os campos!');
     return;
   }
-  Alert.alert('Sucesso ao logar', `Usuário logado com sucesso!`);
-  // Aqui você poderia fazer um fetch/axios para enviar ao backend
+  //Função para realizar o login
+  signInWithEmailAndPassword(auth, email, senha)
+    .then(async(userCredential)=>{
+      const user = userCredential.user
+      await AsyncStorage.setItem('@user',JSON.stringify(user))
+      router.push('/HomeScreen')
+    })
+    .catch((error)=>{
+      const errorCode = error.code
+      const errorMessage = error.message
+      console.log("Error Mensagem: ",errorMessage)
+    })
 };
+
+//Função enviar o e-mail de reset de senha para o usuário
+const esqueceuSenha = ()=>{
+  if(!email){
+    alert("Digite o email para recuperar a senha")
+    return
+  }
+  sendPasswordResetEmail(auth,email)
+    .then(()=>{alert("Enviado e-mail de recuperação")})
+    .catch((error)=>{
+      console.log("Error ao enviar email",error.message)
+      alert("Erro ao enviar e-mail. Verifique se o email está correto.")
+    })
+}
 
 return (
   <View style={styles.container}>
@@ -55,22 +81,34 @@ return (
     />
 
     {/* Campo Senha */}
-    <TextInput
+    <View>
+      <TextInput
       style={styles.input}
       placeholder="Senha"
       placeholderTextColor="#aaa"
-      secureTextEntry
+      secureTextEntry={true}
       value={senha}
       onChangeText={setSenha}
     />
+      
+    </View>
+   
 
     {/* Botão */}
+
     <TouchableOpacity style={styles.botao} onPress={handleLogin}>
       <Text style={styles.textoBotao}>Login</Text>
     </TouchableOpacity>
 
     <Link href="CadastrarScreen" style={{ marginTop: 20, color: 'white', marginLeft: 150 }}>Cadastre-se</Link>
+
+     {/* Texto Esqueceu a senha */}
+    <Text style={{color:'white',justifyContent:"center",marginLeft: 130}} 
+      onPress={esqueceuSenha}>Esqueceu a senha
+    </Text>
   </View>
+
+  
 );
 }
 
