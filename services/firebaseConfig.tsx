@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { initializeAuth } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getFirestore,collection,addDoc } from "firebase/firestore";
 
 //Vai permitir que seja realizado o getReactNativePersistence mesmo sem tipagem
 const {getReactNativePersistence} = require("firebase/auth") as any;
@@ -17,8 +18,10 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+const db = getFirestore(app)
+
 const auth = initializeAuth(app,{
   persistence:getReactNativePersistence(AsyncStorage)
 });
 
-export {auth}
+export {auth,db,getFirestore,collection,addDoc}

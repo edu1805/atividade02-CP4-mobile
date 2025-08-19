@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig'
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,7 +14,7 @@ export default function CadastroScreen() {
   const router = useRouter() // Hook para navegação
 
   // Função para realizar update de senha
-  const handleAlterarSenha = () => {
+  const handleAlterarSenha = async() => {
     if (!novaSenha || !confirmarSenha || !senhaAtual) {
       Alert.alert('Atenção', 'Preencha todos os campos!');
       return;
@@ -36,7 +36,15 @@ export default function CadastroScreen() {
             return
         }
         //Cria as credenciais com e-mail e senha atual para reatenticar
-        
+        const credencial = EmailAuthProvider.credential(user.email,senhaAtual)
+        await reauthenticateWithCredential(user,credencial)
+
+        //Após reautenticar , vamos alterar senha
+        await updatePassword(user,novaSenha)
+        Alert.alert("Sucesso","Senha alterada com sucesso!")
+        router.push('/HomeScreen')
+    }catch(error){
+      console.log("Erro ao alterar senha")
     }
 
     
@@ -44,7 +52,7 @@ export default function CadastroScreen() {
 
     return (
       <View style={styles.container}>
-        <Text style={styles.titulo}>Criar Conta</Text>
+        <Text style={styles.titulo}>Alterar Senha</Text>
 
         {/* Campo Nome */}
         <TextInput
