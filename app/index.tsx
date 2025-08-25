@@ -47,6 +47,9 @@ const handleLogin = () => {
       const errorCode = error.code
       const errorMessage = error.message
       console.log("Error Mensagem: ",errorMessage)
+      if(error.code === 'auth/invalid-credential'){
+        Alert.alert("Error","Verifique email e senha digitados.")
+      }
     })
 };
 
