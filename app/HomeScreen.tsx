@@ -6,8 +6,11 @@ import ItemLoja from "../components/ItemLoja";
 import { useEffect, useState } from "react";
 import { deleteUser } from "firebase/auth";
 import { auth, collection, addDoc, db, getDocs } from "../services/firebaseConfig";
+import ThemeToggleButton from "../src/components/ThemeToggleButton";
+import { useTheme } from "../src/context/ThemeContext";
 
 export default function HomeScreen() {
+    const {colors} = useTheme()//Obtenho a paleta de cores(dark ou light)
     const router = useRouter()//Hook de navegação entre telas
     const [title, setTitle] = useState('')
     interface Item {
@@ -84,14 +87,14 @@ export default function HomeScreen() {
         buscarItems()
     }, [listaItems])
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container,{backgroundColor:colors.background}]}>
             <KeyboardAvoidingView //é componente que ajusta automaticamente o layout
                 style={styles.container}
                 behavior={Platform.OS==='ios'?'padding':'height'}//No ios é utilizado padding, e no android o height
                 keyboardVerticalOffset={20}//Descola o conteúdo na vertical em 20 pixel
             >                
-            
-            <Text>Seja bem-vindo a Tela Inicial da Aplicação</Text>
+            <ThemeToggleButton/>
+            <Text style={[styles.texto,{color:colors.text}]}>Seja bem-vindo a Tela Inicial da Aplicação</Text>
             <Button title="Sair da Conta" onPress={realizarLogoff} />
             <Button title="Exluir conta" color='red' onPress={excluirConta} />
             <Button title="Alterar Senha" onPress={() => router.push("/AlterarSenha")} />
@@ -113,7 +116,11 @@ export default function HomeScreen() {
 
             <TextInput
                 placeholder="Digite o nome do produto"
-                style={styles.input}
+                style={[styles.input,{
+                    backgroundColor:colors.input,
+                    color:colors.inputText,
+                }]}
+                placeholderTextColor={colors.placeHolderTextColor}
                 value={title}
                 onChangeText={(value) => setTitle(value)}
                 onSubmitEditing={salvarItem}
@@ -135,5 +142,9 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         borderRadius: 10,
         marginTop: 'auto'
+    },
+    texto:{
+        fontSize:16,
+        fontWeight:'bold'
     }
 })

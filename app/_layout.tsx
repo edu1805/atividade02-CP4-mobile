@@ -1,10 +1,10 @@
 import { Stack } from "expo-router";
-import { View } from "react-native";
+import { ThemeProvider } from "../src/context/ThemeContext";
 
 export default function Layout() {
   return (
-    <View style={{ flex: 1 }}>
+    <ThemeProvider>
       <Stack screenOptions={{ headerShown: false }} />
-    </View>
+    </ThemeProvider>
   );
 }
