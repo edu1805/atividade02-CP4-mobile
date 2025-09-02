@@ -2,10 +2,10 @@ import { Text, Button, Alert, TextInput, StyleSheet, ActivityIndicator, FlatList
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import ItemLoja from "../components/ItemLoja";
+import ItemLoja from "../src/components/ItemLoja";
 import { useEffect, useState } from "react";
 import { deleteUser } from "firebase/auth";
-import { auth, collection, addDoc, db, getDocs } from "../services/firebaseConfig";
+import { auth, collection, addDoc, db, getDocs } from "../src/services/firebaseConfig";
 import ThemeToggleButton from "../src/components/ThemeToggleButton";
 import { useTheme } from "../src/context/ThemeContext";
 
