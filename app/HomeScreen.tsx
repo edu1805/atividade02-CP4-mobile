@@ -8,9 +8,23 @@ import { deleteUser } from "firebase/auth";
 import { auth, collection, addDoc, db, getDocs } from "../src/services/firebaseConfig";
 import ThemeToggleButton from "../src/components/ThemeToggleButton";
 import { useTheme } from "../src/context/ThemeContext";
+import * as Notifications from "expo-notifications"
+import * as Device from "expo-device"
+
+
+
+//Configuração global das notificações no foreground
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowBanner: true, //exibe o banner da notificação
+        shouldShowList: true, //exibe o histórico
+        shouldPlaySound: true, // toca som
+        shouldSetBadge: false //não altera o badge do app
+    })
+})
 
 export default function HomeScreen() {
-    const {colors} = useTheme()//Obtenho a paleta de cores(dark ou light)
+    const { colors } = useTheme()//Obtenho a paleta de cores(dark ou light)
     const router = useRouter()//Hook de navegação entre telas
     const [title, setTitle] = useState('')
     interface Item {
@@ -83,48 +97,85 @@ export default function HomeScreen() {
             console.log("Error ao buscar os dados:", e)
         }
     }
+
+    const dispararNotificacao = async () => {
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "Promoções disponíveis", //Titulo da notificação
+                body: "Não perca nossas promoções do dia 08/09/2025"//corpo da notificação
+            },
+            trigger: {
+                type: "timeInterval", //Tipo do trigger: Intervalo de tempo
+                seconds: 2, // aguarda 02 segundos antes de disparar
+                repeats: false, //não repete
+            } as Notifications.TimeIntervalTriggerInput // cast para o tipo correto
+        })
+
+    }
+
     useEffect(() => {
         buscarItems()
     }, [listaItems])
+
+    useEffect(() => {
+        (async () => {
+            if (Device.isDevice) {
+                //Verificar se já tem de permisão de notificação
+                const { status: existingStatus } = await Notifications.getPermissionsAsync()
+                let finalStatus = existingStatus
+
+                //Se não tiver permissão, solicita ao usuário
+                if (existingStatus !== "granted") {
+                    const { status } = await Notifications.requestPermissionsAsync()
+                    finalStatus = status
+                }
+
+                //Se ainda não foi permitido o usuario das notificações
+                if (finalStatus !== "granted") {
+                    alert("Permissão para notificação não concedida")
+                }
+            }
+        })()
+    }, [])
     return (
-        <SafeAreaView style={[styles.container,{backgroundColor:colors.background}]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <KeyboardAvoidingView //é componente que ajusta automaticamente o layout
                 style={styles.container}
-                behavior={Platform.OS==='ios'?'padding':'height'}//No ios é utilizado padding, e no android o height
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}//No ios é utilizado padding, e no android o height
                 keyboardVerticalOffset={20}//Descola o conteúdo na vertical em 20 pixel
-            >                
-            <ThemeToggleButton/>
-            <Text style={[styles.texto,{color:colors.text}]}>Seja bem-vindo a Tela Inicial da Aplicação</Text>
-            <Button title="Sair da Conta" onPress={realizarLogoff} />
-            <Button title="Exluir conta" color='red' onPress={excluirConta} />
-            <Button title="Alterar Senha" onPress={() => router.push("/AlterarSenha")} />
+            >
+                <ThemeToggleButton />
+                <Text style={[styles.texto, { color: colors.text }]}>Seja bem-vindo a Tela Inicial da Aplicação</Text>
+                <Button title="Sair da Conta" onPress={realizarLogoff} />
+                <Button title="Exluir conta" color='red' onPress={excluirConta} />
+                <Button title="Alterar Senha" onPress={() => router.push("/AlterarSenha")} />
+                <Button title="Enviar notificação" color='purple' onPress={dispararNotificacao} />
+                {listaItems.length <= 0 ? (
+                    <ActivityIndicator />
+                ) : (
+                    <FlatList
+                        data={listaItems}
+                        renderItem={({ item }) => (
+                            <ItemLoja
+                                title={item.title}
+                                isChecked={item.isChecked}
+                                id={item.id}
+                            />
+                        )}
+                    />
+                )}
 
-            {listaItems.length <= 0 ? (
-                <ActivityIndicator />
-            ) : (
-                <FlatList
-                    data={listaItems}
-                    renderItem={({ item }) => (
-                       <ItemLoja 
-                            title={item.title}
-                            isChecked={item.isChecked}
-                            id={item.id}                        
-                       />
-                    )}
+                <TextInput
+                    placeholder="Digite o nome do produto"
+                    style={[styles.input, {
+                        backgroundColor: colors.input,
+                        color: colors.inputText,
+                    }]}
+                    placeholderTextColor={colors.placeHolderTextColor}
+                    value={title}
+                    onChangeText={(value) => setTitle(value)}
+                    onSubmitEditing={salvarItem}
                 />
-            )}
-
-            <TextInput
-                placeholder="Digite o nome do produto"
-                style={[styles.input,{
-                    backgroundColor:colors.input,
-                    color:colors.inputText,
-                }]}
-                placeholderTextColor={colors.placeHolderTextColor}
-                value={title}
-                onChangeText={(value) => setTitle(value)}
-                onSubmitEditing={salvarItem}
-            />
             </KeyboardAvoidingView>
         </SafeAreaView>
     )
@@ -143,8 +194,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginTop: 'auto'
     },
-    texto:{
-        fontSize:16,
-        fontWeight:'bold'
+    texto: {
+        fontSize: 16,
+        fontWeight: 'bold'
     }
 })
