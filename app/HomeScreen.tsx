@@ -11,13 +11,10 @@ import { useTheme } from "../src/context/ThemeContext";
 import * as Notifications from "expo-notifications"
 import * as Device from "expo-device"
 
-
-
 //Configuração global das notificações no foreground
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowBanner: true, //exibe o banner da notificação
-        shouldShowList: true, //exibe o histórico
+        shouldShowAlert: true, //SDK 52 utiliza "Alert"
         shouldPlaySound: true, // toca som
         shouldSetBadge: false //não altera o badge do app
     })
@@ -27,6 +24,8 @@ export default function HomeScreen() {
     const { colors } = useTheme()//Obtenho a paleta de cores(dark ou light)
     const router = useRouter()//Hook de navegação entre telas
     const [title, setTitle] = useState('')
+    const[expoPushToken,setExpoPushToken] = useState<string|null>(null)
+
     interface Item {
         id: String;
         title: String;
@@ -105,7 +104,6 @@ export default function HomeScreen() {
                 body: "Não perca nossas promoções do dia 08/09/2025"//corpo da notificação
             },
             trigger: {
-                type: "timeInterval", //Tipo do trigger: Intervalo de tempo
                 seconds: 2, // aguarda 02 segundos antes de disparar
                 repeats: false, //não repete
             } as Notifications.TimeIntervalTriggerInput // cast para o tipo correto
@@ -113,27 +111,60 @@ export default function HomeScreen() {
 
     }
 
+    //Função para registrar o dispositivo e obter o Expo Push Token
+    //Esse token que será gerado, é utilizado para enviar notificação remota
+    const registerForPushNotificationsAsync = async():Promise<string|null>=>{
+        try{
+            const tokenData = await Notifications.getExpoPushTokenAsync()
+            const token = tokenData.data
+            console.log("Expo Push Token gerado com sucesso: ", token)
+            return token
+        }catch(error){
+            console.log("Erro ao gerar token", error)
+            return null
+        }
+    }
+
+    useEffect(()=>{
+        (async()=>{
+            //Chama a função que registra o dispositivo com o serviço de notificação
+            const token = await registerForPushNotificationsAsync()
+            //Armazenando o token no estado
+            setExpoPushToken(token)
+        })()
+    },[])
+
+    useEffect(()=>{
+        //Adiciona um ouvinte(listener) que será chamado sempre que uma notificação for recebida.
+        const subscription = Notifications.addNotificationReceivedListener(notification =>{
+            //Exibir no console a notificação recebida - útil para testes ou debug
+            console.log("Notificação recebida: ", notification)
+        })
+
+        //Função de limpeza que será chamada
+        return ()=>subscription.remove()
+    },[])
+
     useEffect(() => {
         buscarItems()
     }, [listaItems])
 
     useEffect(() => {
         (async () => {
-            if (Device.isDevice) {
-                //Verificar se já tem de permisão de notificação
-                const { status: existingStatus } = await Notifications.getPermissionsAsync()
-                let finalStatus = existingStatus
 
-                //Se não tiver permissão, solicita ao usuário
-                if (existingStatus !== "granted") {
-                    const { status } = await Notifications.requestPermissionsAsync()
-                    finalStatus = status
-                }
+            //Verificar se já tem de permisão de notificação
+            const { status: existingStatus } = await Notifications.getPermissionsAsync()
+            let finalStatus = existingStatus
 
-                //Se ainda não foi permitido o usuario das notificações
-                if (finalStatus !== "granted") {
-                    alert("Permissão para notificação não concedida")
-                }
+            //Se não tiver permissão, solicita ao usuário
+            if (existingStatus !== "granted") {
+                const { status } = await Notifications.requestPermissionsAsync()
+                finalStatus = status
+            }
+
+            //Se ainda não foi permitido o usuario das notificações
+            if (finalStatus !== "granted") {
+                alert("Permissão para notificação não concedida")
             }
         })()
     }, [])
@@ -150,6 +181,11 @@ export default function HomeScreen() {
                 <Button title="Exluir conta" color='red' onPress={excluirConta} />
                 <Button title="Alterar Senha" onPress={() => router.push("/AlterarSenha")} />
                 <Button title="Enviar notificação" color='purple' onPress={dispararNotificacao} />
+
+                {expoPushToken?<Text>Token Gerado:{expoPushToken}</Text>:(
+                    <Text>Registrando token....</Text>
+                )}
+                
                 {listaItems.length <= 0 ? (
                     <ActivityIndicator />
                 ) : (
