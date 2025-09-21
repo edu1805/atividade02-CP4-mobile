@@ -1,6 +1,6 @@
 import { 
   Text, Button, Alert, TextInput, StyleSheet, 
-  ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View, TouchableOpacity 
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View, TouchableOpacity, ScrollView 
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,7 +13,6 @@ import ThemeToggleButton from "../src/components/ThemeToggleButton";
 import { useTheme } from "../src/context/ThemeContext";
 import * as Notifications from "expo-notifications";
 
-//Configuração global das notificações
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -35,14 +34,13 @@ interface Task {
 export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState(""); // <-- state para data
+  const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [expoPushToken,setExpoPushToken] = useState<string|null>(null)
 
   const realizarLogoff = async () => {
     await AsyncStorage.removeItem('@user');
@@ -70,7 +68,7 @@ export default function HomeScreen() {
               }
             } catch (error) {
               console.log("Erro ao excluir conta.", error);
-              Alert.alert("Error", "Não foi possível excluir conta");
+              Alert.alert("Erro", "Não foi possível excluir conta");
             }
           }
         }
@@ -113,9 +111,7 @@ export default function HomeScreen() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      setTitle("");
-      setDescription("");
-      setDueDate("");
+      setTitle(""); setDescription(""); setDueDate("");
       carregarTarefas();
     } catch (e) {
       console.log("Erro ao salvar tarefa:", e);
@@ -140,14 +136,8 @@ export default function HomeScreen() {
         duedate: dueDate ? new Date(dueDate) : null,
         updatedAt: serverTimestamp()
       });
-
-      // Limpar campos
-      setTitle("");
-      setDescription("");
-      setDueDate("");
-      setEditingTaskId(null);
-
-      carregarTarefas(); // Atualiza a lista
+      setTitle(""); setDescription(""); setDueDate(""); setEditingTaskId(null);
+      carregarTarefas();
     } catch (e) {
       console.log("Erro ao editar tarefa:", e);
     }
@@ -173,137 +163,148 @@ export default function HomeScreen() {
     }
   }
 
-  useEffect(() => {
-    carregarTarefas();
-  }, [])
-
+  useEffect(() => { carregarTarefas(); }, [])
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log("Usuário autenticado:", user.uid);
-      } else {
-        console.log("Nenhum usuário logado");
-      }
+      console.log(user ? "Usuário autenticado:" + user.uid : "Nenhum usuário logado");
     });
     return () => unsubscribe();
   }, []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={20}
-      >
-        <ThemeToggleButton />
+  <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    {loading ? (
+      <ActivityIndicator size="large" color={colors.text} style={{ marginTop: 20 }} />
+    ) : (
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <>
+            <ThemeToggleButton />
 
-        <Button title="Sair da Conta" onPress={realizarLogoff} />
-        <Button title="Excluir conta" color='red' onPress={excluirConta} />
-        <Button title="Alterar Senha" onPress={() => router.push("/AlterarSenha")} />
+            <View style={styles.buttonsRow}>
+              <Button title="Sair da Conta" onPress={realizarLogoff} />
+              <Button title="Excluir conta" color="red" onPress={excluirConta} />
+              <Button title="Alterar Senha" onPress={() => router.push("/AlterarSenha")} />
+            </View>
 
-        <Text style={[styles.texto, { color: colors.text, marginTop: 20, fontSize: 20, margin: 'auto' }]}>
-          MINHAS TAREFAS
-        </Text>
+            <Text style={[styles.title, { color: colors.text }]}>MINHAS TAREFAS</Text>
 
-        {loading ? (
-          <ActivityIndicator />
-        ) : (
-          <FlatList
-            data={tasks}
-            keyExtractor={(item) => item.id}
-            ListEmptyComponent={() => (
-              <Text style={{ 
-                color: colors.text, 
-                fontSize: 16, 
-                fontStyle: 'italic', 
-                textAlign: 'center', 
-                marginTop: 20 
-              }}>
-                Você ainda não tem tarefas cadastradas.
-              </Text>
-            )}
-            renderItem={({ item }) => (
-              <View 
-                style={{
-                  padding: 10,
-                  borderBottomWidth: 1,
-                  borderColor: colors.input
-                }}
-              >
-                <TouchableOpacity onPress={() => toggleConcluida(item.id, item.completed)}>
-                  <Text style={{ 
-                    textDecorationLine: item.completed ? "line-through" : "none", 
-                    color: colors.text, fontWeight: 'bold', fontSize: 15
-                  }}>
-                    {item.title.toUpperCase()} 
-                  </Text>
-                  <Text style={{ color: colors.text, 
-                    textDecorationLine: item.completed ? "line-through" : "none", fontSize: 15 }}>
-                    {item.description} 
-                  </Text>
-                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: 'bold' }}>
-                    Prazo: {item.duedate ? item.duedate.toLocaleDateString() : "Sem prazo"}
-                  </Text>
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: 'bold' }}>
-                    Criado: {item.createdAt?.toLocaleDateString() || "—"}
-                  </Text>
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: 'bold' }}>
-                    Atualizado: {item.updatedAt?.toLocaleString() || "—"}
-                  </Text>
-                </TouchableOpacity>
-                <View style={{flexDirection: 'row', justifyContent: 'flex-start', marginTop: 10}}>
-                  <View style={{marginRight: 20}}>
-                    <Button title="🗑 Excluir tarefa" color={'red'} onPress={() => excluirTarefa(item.id)} />
-                  </View>
-                  <Button title="✏️ Editar" color="orange" onPress={() => iniciarEdicao(item)} />
-                </View>
-                
-              </View>
-              
-            )}
-          />
+            <TextInput
+              placeholder="Título da tarefa"
+              style={[styles.input, { backgroundColor: colors.input, color: colors.inputText }]}
+              placeholderTextColor={colors.placeHolderTextColor}
+              value={title}
+              onChangeText={setTitle}
+            />
+            <TextInput
+              placeholder="Descrição"
+              style={[styles.input, { backgroundColor: colors.input, color: colors.inputText }]}
+              placeholderTextColor={colors.placeHolderTextColor}
+              value={description}
+              onChangeText={setDescription}
+            />
+            <TextInput
+              placeholder="Prazo (YYYY-MM-DD)"
+              style={[styles.input, { backgroundColor: colors.input, color: colors.inputText, marginBottom: 10 }]}
+              placeholderTextColor={colors.placeHolderTextColor}
+              value={dueDate}
+              onChangeText={setDueDate}
+            />
+            <Button
+              title={editingTaskId ? "Salvar Alterações" : "Adicionar Tarefa"}
+              onPress={editingTaskId ? salvarEdicao : salvarTarefa}
+            />
+          </>
+        }
+        ListEmptyComponent={() => (
+          <Text style={[styles.emptyList, { color: colors.text }]}>
+            Você ainda não tem tarefas cadastradas.
+          </Text>
         )}
+        renderItem={({ item }) => (
+          <View style={[styles.taskCard, { borderColor: colors.input }]}>
+            <TouchableOpacity onPress={() => toggleConcluida(item.id, item.completed)}>
+              <Text
+                style={[
+                  styles.taskTitle,
+                  {
+                    color: colors.text,
+                    textDecorationLine: item.completed ? "line-through" : "none",
+                  },
+                ]}
+              >
+                {item.title.toUpperCase()}
+              </Text>
+              <Text
+                style={[
+                  styles.taskDesc,
+                  {
+                    color: colors.text,
+                    textDecorationLine: item.completed ? "line-through" : "none",
+                  },
+                ]}
+              >
+                {item.description}
+              </Text>
+              <Text style={[styles.taskInfo, { color: colors.text }]}>
+                Prazo: {item.duedate ? item.duedate.toLocaleDateString() : "Sem prazo"}
+              </Text>
+              <Text style={[styles.taskInfo, { color: colors.text }]}>
+                Criado: {item.createdAt?.toLocaleString() || "—"}
+              </Text>
+              <Text style={[styles.taskInfo, { color: colors.text }]}>
+                Atualizado: {item.updatedAt?.toLocaleString() || "—"}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.taskButtons}>
+              <Button title="🗑 Excluir" color="red" onPress={() => excluirTarefa(item.id)} />
+              <View style={{ width: 10 }} />
+              <Button title="✏️ Editar" color="orange" onPress={() => iniciarEdicao(item)} />
+            </View>
+          </View>
+        )}
+        contentContainerStyle={{ paddingBottom: 30 }}
+      />
+    )}
+  </SafeAreaView>
+);
 
-        <TextInput
-          placeholder="Título da tarefa"
-          style={[styles.input, { backgroundColor: colors.input, color: colors.inputText }]}
-          placeholderTextColor={colors.placeHolderTextColor}
-          value={title}
-          onChangeText={setTitle}
-        />
-        <TextInput
-          placeholder="Descrição"
-          style={[styles.input, { backgroundColor: colors.input, color: colors.inputText }]}
-          placeholderTextColor={colors.placeHolderTextColor}
-          value={description}
-          onChangeText={setDescription}
-        />
-        <TextInput
-          placeholder="Prazo (YYYY-MM-DD)"
-          style={[styles.input, { backgroundColor: colors.input, color: colors.inputText }]}
-          placeholderTextColor={colors.placeHolderTextColor}
-          value={dueDate}
-          onChangeText={setDueDate}
-        />
-        <Button title={editingTaskId ? "Salvar Alterações" : "Adicionar Tarefa"} 
-        onPress={editingTaskId ? salvarEdicao : salvarTarefa} />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 10
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 10
+  },
   input: {
-    padding: 10,
-    fontSize: 15,
+    padding: 12,
+    fontSize: 16,
     width: '90%',
     alignSelf: 'center',
     borderRadius: 10,
     marginTop: 10
   },
-  texto: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  }
-})
+  taskCard: {
+    padding: 12,
+    borderBottomWidth: 1,
+    marginHorizontal: 15,
+    marginVertical: 8,
+    borderRadius: 8
+  },
+  taskTitle: { fontWeight: 'bold', fontSize: 16 },
+  taskDesc: { fontSize: 15, marginTop: 2 },
+  taskInfo: { fontSize: 14, marginTop: 2, fontWeight: 'bold' },
+  taskButtons: { flexDirection: 'row', marginTop: 8, justifyContent: 'flex-start' },
+  emptyList: { fontSize: 16, fontStyle: 'italic', textAlign: 'center', marginTop: 20 }
+});
